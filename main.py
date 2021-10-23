@@ -1,7 +1,13 @@
 import re
 import constants
 import utils
+import argparse
 from operator import itemgetter
+
+parser = argparse.ArgumentParser(description='Heist planner program')
+parser.add_argument('-p', '--path', help=f"Path to log file. Default: {constants.SHIFT_LOG_PATH}", required=False,
+                    default=constants.SHIFT_LOG_PATH)
+args = vars(parser.parse_args())
 
 
 class HeistPlanner:
@@ -9,11 +15,28 @@ class HeistPlanner:
     Plans perfect heist time - gets a log of shifts, and calculates which guard slept them most and in which minute
     he is most likely to fall asleep
     """
-    def __init__(self, log_lines):
-        self.log_lines = log_lines
+    def __init__(self):
+        self._log_path = args['path']
+        self.__log_lines = None
 
     def __str__(self):
-        return f"Log lines are: {self.log_lines}"
+        return f"Log lines are: {self.__log_lines}"
+
+    @property
+    def log_path(self):
+        return self._log_path
+
+    @log_path.setter
+    def log_path(self, path):
+        self._log_path = path
+
+    def read_log(self):
+        """
+        Uses context manager to open log file
+        :return:
+        """
+        with utils.FileManager(self.log_path, 'r') as f:
+            self.__log_lines = f.readlines()
 
     def parse_log(self):
         """
@@ -22,7 +45,8 @@ class HeistPlanner:
         :return: dict of {guard: time_slept}, dict of {guard: {minute1: time_slept_in_minute1, ...,
         minuteN: time_slept_minute_N}}
         """
-        sorted_lines = sorted(self.log_lines)
+
+        sorted_lines = sorted(self.__log_lines)
         total_minutes_slept_dict = {}
         sleep_frequency_dict = {}
 
@@ -69,16 +93,16 @@ class HeistPlanner:
         # Find in which minute guard from above slept the most
         most_frequent_minute = max(frequency[max_time_slept[0]].items(), key=key)
         # Print final message
-        print(f"Guard #{max_time_slept[0]} is most likely to be asleep in 00:{most_frequent_minute[0]}")
+        message = f"Guard #{max_time_slept[0]} is most likely to be asleep in 00:{most_frequent_minute[0]}"
+        print(message)
+        return message
 
 
-# Press the green button in the gutter to run the script.
+def main():
+    planner_obj = HeistPlanner()
+    planner_obj.read_log()
+    planner_obj.run()
+
+
 if __name__ == '__main__':
-
-    with utils.FileManager(constants.SHIFT_LOG_PATH, 'r') as f:
-        lines = f.readlines()
-
-    plannerObj = HeistPlanner(log_lines=lines)
-    plannerObj.run()
-    # TODO: Make this a script
-    # TODO: Make tests with pytest
+    main()
